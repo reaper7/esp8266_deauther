@@ -92,55 +92,101 @@ void DisplayUI::setupButtons() {
     buttonB.enabled = false;
 #endif // ifdef BUTTON_B
 
+#ifdef USE_I2C_BUTTONS
+  Wire.begin(DEAUTH_PIN_SDA, DEAUTH_PIN_SCL);
+#endif
+
     // ====================== //
     // setup and read functions
     // ====================== //
     buttonUp.setup = [this]() {
+#ifndef USE_I2C_BUTTONS
                          if (buttonUp.gpio != 2) pinMode(buttonUp.gpio, INPUT_PULLUP);
+#endif
                          buttonUp.time = currentTime;
                      };
     buttonUp.read = [this]() {
+#ifndef USE_I2C_BUTTONS
                         return !digitalRead(buttonUp.gpio);
+#else
+                        Wire.requestFrom(BUTTONS_I2C_ADDR, 1);
+                        return !((Wire.read())&1<<buttonUp.gpio);
+#endif
                     };
 
     buttonDown.setup = [this]() {
+#ifndef USE_I2C_BUTTONS
                            if (buttonDown.gpio != 2) pinMode(buttonDown.gpio, INPUT_PULLUP);
+#endif
                            buttonDown.time = currentTime;
                        };
     buttonDown.read = [this]() {
+#ifndef USE_I2C_BUTTONS
                           return !digitalRead(buttonDown.gpio);
+#else
+                          Wire.requestFrom(BUTTONS_I2C_ADDR, 1);
+                          return !((Wire.read())&1<<buttonDown.gpio);
+#endif
                       };
 
     buttonLeft.setup = [this]() {
+#ifndef USE_I2C_BUTTONS
                            if (buttonLeft.gpio != 2) pinMode(buttonLeft.gpio, INPUT_PULLUP);
+#endif
                            buttonLeft.time = currentTime;
                        };
     buttonLeft.read = [this]() {
+#ifndef USE_I2C_BUTTONS
                           return !digitalRead(buttonLeft.gpio);
+#else
+                          Wire.requestFrom(BUTTONS_I2C_ADDR, 1);
+                          return !((Wire.read())&1<<buttonLeft.gpio);
+#endif              
                       };
 
     buttonRight.setup = [this]() {
+#ifndef USE_I2C_BUTTONS
                             if (buttonRight.gpio != 2) pinMode(buttonRight.gpio, INPUT_PULLUP);
+#endif
                             buttonRight.time = currentTime;
                         };
     buttonRight.read = [this]() {
+#ifndef USE_I2C_BUTTONS
                            return !digitalRead(buttonRight.gpio);
+#else
+                           Wire.requestFrom(BUTTONS_I2C_ADDR, 1);
+                           return !((Wire.read())&1<<buttonRight.gpio);
+#endif
                        };
 
     buttonA.setup = [this]() {
+#ifndef USE_I2C_BUTTONS
                         if (buttonA.gpio != 2) pinMode(buttonA.gpio, INPUT_PULLUP);
+#endif
                         buttonA.time = currentTime;
                     };
     buttonA.read = [this]() {
+#ifndef USE_I2C_BUTTONS
                        return !digitalRead(buttonA.gpio);
+#else
+                       Wire.requestFrom(BUTTONS_I2C_ADDR, 1);
+                       return !((Wire.read())&1<<buttonA.gpio);
+#endif
                    };
 
     buttonB.setup = [this]() {
+#ifndef USE_I2C_BUTTONS
                         if (buttonB.gpio != 2) pinMode(buttonB.gpio, INPUT_PULLUP);
+#endif
                         buttonB.time = currentTime;
                     };
     buttonB.read = [this]() {
+#ifndef USE_I2C_BUTTONS
                        return !digitalRead(buttonB.gpio);
+#else
+                       Wire.requestFrom(BUTTONS_I2C_ADDR, 1);
+                       return !((Wire.read())&1<<buttonB.gpio);
+#endif
                    };
 
     // ====================== //
@@ -797,6 +843,35 @@ void DisplayUI::drawMenu() {
         tmp = (currentMenu->selected == i ? CURSOR : SPACE) + tmp;
         drawString(0, (i - row) * 12, tmp);
     }
+   
+    if (currentMenu->list->size() <= 4) {
+      #define NSAMPLES    100
+      #define VOLTNOBATT  0.7
+      //int r1 = 340000;
+      //int r2 = 100000;
+      int tempvalue = 0;
+      
+      //if (r2 == 0)
+      //  r2 = 1;
+    
+      for(uint8_t i = 1; i <= NSAMPLES; i++ ) {
+        tempvalue += analogRead(A0);
+      }
+    
+      tempvalue = int(tempvalue/NSAMPLES);
+    
+      //float res = ((((tempvalue * 1000) / 1024) * (r1 + r2)) / r2) / 1000.0;
+      //float res = (((tempvalue / 1.024) * (r1 + r2)) / r2) / 1000.0;
+      float res = ((tempvalue / 1.024) * 4.4) / 1000.0;
+      
+      if (res > VOLTNOBATT) {
+        drawString(0, (4) * 12, " ACCU ");
+        drawString(44, (4) * 12, String(res,2));
+      } else {
+        drawString(0, (4) * 12, " ACCU -.--");
+      }
+    }
+
 }
 
 void DisplayUI::drawLoadingScan() {
